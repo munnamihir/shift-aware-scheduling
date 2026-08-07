@@ -4,7 +4,7 @@
 ~15% of interview panel seats — at no cost to how many loops get filled.**
 
 ![Panel seats by shift cohort](panel_seats.png)
-
+[See the interviewer's view →](https://munnamihir.github.io/shift-aware-scheduling/panel_invite.html)
 |  | Back-to-back | Split across days |
 |---|---|---|
 | loops filled | 74.6% | 73.7% |
