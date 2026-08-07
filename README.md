@@ -1,7 +1,9 @@
 # Shift-aware interview scheduling
 
-**Splitting an interview loop across days moves day-shift production workers from 0% to
-~15% of interview panel seats — at no cost to how many loops get filled.**
+**A two-hour window can't host a four-hour loop.** That one fact takes day-shift
+production workers off interview panels entirely. Letting a loop's four rounds land on
+different days moves them from 0% to ~15% of panel seats — at no cost to how many loops
+get filled.
 
 ![Panel seats by shift cohort](panel_seats.png)
 
@@ -11,6 +13,8 @@
 | panel seats held by shift workers | ~38% | ~53% |
 | day-shift seats | **0%** | **~15%** |
 | max load on any one interviewer | 2 | 2 |
+
+**[See the interviewer's view →](https://munnamihir.github.io/shift-aware-scheduling/panel_invite.html)**
 
 Figures vary by about a percentage point between runs — CP-SAT's parallel workers are
 nondeterministic. Set `num_workers = 1` if you need them reproducible to the decimal.
@@ -23,7 +27,7 @@ candidate are production, maintenance, or quality staff on rotating shifts. Thei
 availability is a short window adjacent to a shift, at one physical site, on the days
 that shift runs.
 
-At a factory site, availability by hour looks like this:
+Availability by hour at one site, from a 20k-interviewer run:
 
 ```
 09:00–13:00    643   corporate only
@@ -106,20 +110,22 @@ under 6s.
 
 ## What's unfinished
 
-1. **`POOL_CAP` sensitivity is unresolved.** Fill rate appears to *fall* as the shortlist
-   grows, which is impossible for a genuine superset — a larger pool can't make the
-   optimum worse. Either the shortlists aren't nested across caps or the larger models
-   are hitting the time limit. `sweep.py` prints solver status to help tell which.
+1. **The `POOL_CAP` sweep can't currently measure what it's meant to.** Shortlists aren't
+   nested across cap values — sampling is per-loop, so a larger cap isn't a superset of a
+   smaller one. That's why fill rate appears to *fall* as the pool grows, which is
+   impossible for a genuine superset. Making them nested without collapsing the
+   cross-loop diversity described above is unresolved; a deterministic-ranking attempt
+   made it worse.
 2. **The effect is density-sensitive.** It weakens below roughly 10k interviewers per
    site, where the shortlist starves the day-shift pool. Worth characterising properly.
 3. **No timezone handling.** Slots are site-local; a cross-site panelist needs offset
    conversion.
 4. **No competency matching** beyond function and level.
-5. **No candidate- or interviewer-side UX.** The point of a deskless-first tool is that
-   the interviewer confirms from a phone or a shop-floor kiosk, not Outlook.
+5. **Interviewer confirmation screen only.** No candidate-side scheduling, no kiosk mode
+   for shop-floor terminals, no push notifications.
 
 ## Caveats
 
 Synthetic data throughout — shift patterns, site mix, and interviewer levels are modeled,
-not observed. The *mechanism* (a two-hour window can't host a four-hour loop) holds
-regardless of the numbers. The *magnitude* would need real availability data to confirm.
+not observed. The *mechanism* holds regardless of the numbers. The *magnitude* would need
+real availability data to confirm.
