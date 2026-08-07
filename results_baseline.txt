@@ -1,0 +1,23 @@
+
+--- back-to-back (industry default) ---
+  fill rate             74.6%  (1,492/2,000)
+  wall time             46.0s over 6 shards
+  distinct interviewers 5,188
+  max / mean load       2 / 1.15
+  seats held by shift workers: 35.4%
+      corporate   3,856  (64.6%)
+      weekend_d   1,331  (22.3%)
+      night_c       509  (8.5%)
+      swing_b       272  (4.6%)
+
+--- split across days ---
+  fill rate             73.7%  (1,473/2,000)
+  wall time             44.1s over 6 shards
+  distinct interviewers 5,304
+  max / mean load       2 / 1.11
+  seats held by shift workers: 52.3%
+      corporate   2,811  (47.7%)
+      weekend_d   1,305  (22.1%)
+      day_a         902  (15.3%)
+      night_c       454  (7.7%)
+      swing_b       420  (7.1%)
