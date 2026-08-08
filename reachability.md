@@ -134,8 +134,46 @@ severed from a long enough run. Synchronous debrief excludes cohorts whose windo
 intersect the panel's common availability. Fixing either alone is insufficient; the split
 protocol happens to address both.
 
-Open: is asynchronous or next-day debrief sufficient on its own, without splitting? The
-model predicts yes. Untested.
+### Async debrief, tested: also insufficient
+
+Relaxing debrief to *any* slot within 24 hours of the final round, under back-to-back
+scheduling with the changeover staffed, still yields **0% day-shift seats**.
+
+The reason sharpens Proposition 4 considerably. The problem is not debrief *timing* — it
+is disjointness.
+
+**Proposition 5.** Under any synchronous debrief policy, a panel
+$(p_1,\dots,p_k)$ is schedulable only if $\bigcap_i A_{p_i} \neq \emptyset$.
+Consequently, cohorts with disjoint availability can never share a panel, at any debrief
+time.
+
+Corporate (09:00–17:00) and day shift (18:00–19:00) are disjoint. No debrief policy that
+requires simultaneity can put them on the same panel. Moving the debrief later, earlier,
+or to the following day changes nothing.
+
+**Corollary 4.** A cohort with disjoint availability from every other cohort can only be
+served by a *single-cohort panel* — all $k$ assessors drawn from that cohort alone.
+
+This is the actual mechanism behind the headline result. Under the contiguous protocol a
+single-cohort day-shift panel is impossible: it would need $k$ consecutive staffed slots
+inside a two-slot window. Under the split protocol it is trivial — four rounds at
+18:00 Mon, 18:00 Tue, 19:00 Wed, 18:00 Thu, debriefing at 19:00 Thu, every panelist
+day shift. That is what the 15% consists of.
+
+So the three interventions rank cleanly, and only one works:
+
+| intervention | day-shift seats |
+|---|---|
+| staff the changeover hour | 0% |
+| relax debrief to any slot within 24h | 0% |
+| split the loop across days | ~15% |
+
+Splitting works not because it relaxes contiguity per se, but because it is the only one
+of the three that makes single-cohort panels schedulable.
+
+Open: does the result survive dropping the synchronous debrief entirely (written or
+asynchronous sign-off)? Under Proposition 5 that should admit mixed-cohort panels and
+raise day-shift share further. Untested.
 
 ## Split protocols
 
