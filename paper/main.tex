@@ -1,0 +1,290 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}[proposition]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[proposition]{Definition}
+
+\title{Structural Exclusion of Shift-Based Cohorts in Panel Scheduling}
+\author{Mihir Bommisetty}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Panel assessment processes---hiring loops, promotion boards, certification reviews---are
+typically scheduled as a block of consecutive sessions followed by a synchronous debrief.
+We show that this format structurally excludes cohorts whose availability is confined to
+short windows adjacent to a work shift, independently of their number, qualification, or
+willingness to participate. We formalise \emph{cohort reachability} for a population with
+heterogeneous availability, and prove that exclusion arises from two distinct and
+independent mechanisms: \emph{contiguity}, which requires a run of consecutively staffed
+slots at least as long as the panel, and \emph{simultaneity}, which requires the entire
+panel to share a common free slot for debrief. We show that the second implies that
+cohorts with pairwise-disjoint availability can never share a panel under any synchronous
+debrief policy, and hence that such cohorts are served only by single-cohort panels. A
+constraint-programming implementation at a scale of $10^5$ assessors confirms the
+analysis: of three candidate interventions, the two that address contiguity or debrief
+timing alone yield no improvement, while relaxing the contiguity requirement---the only
+one that admits single-cohort panels---moves the affected cohort from $0\%$ to
+approximately $15\%$ of panel seats at no cost to the proportion of panels filled.
+Results are obtained on synthetic populations; the mechanisms are exact, the magnitudes
+are not validated against field data.
+\end{abstract}
+
+\section{Introduction}
+
+A substantial fraction of the workforce in manufacturing, logistics, healthcare, and
+retail does not work at a desk. These employees are typically assigned to rotating shifts,
+lack individual corporate accounts, and have narrow discretionary time. Practitioner
+literature on ``deskless'' or ``frontline'' workers observes that processes designed
+around calendar software and email systematically under-reach them.
+
+This paper examines one such process: panel assessment, in which several assessors each
+conduct a session with a subject, followed by a joint debrief. The dominant format
+schedules all sessions consecutively on a single day. We ask whether this format is
+merely inconvenient for shift workers, or whether it excludes them as a matter of
+combinatorial structure.
+
+We find the latter, and identify two separate mechanisms. Our contributions are:
+
+\begin{enumerate}
+  \item A formalisation of \emph{cohort reachability} under a scheduling protocol
+        (Section~\ref{sec:model}).
+  \item A characterisation of reachability under contiguous protocols in terms of the
+        connectivity of the staffed set, including the observation that a single
+        unstaffed slot can exclude a cohort no member of which is available at that slot
+        (Propositions~\ref{prop:cont}--\ref{prop:sever}).
+  \item A stronger exclusion result for synchronous debrief: panels are schedulable only
+        if all assessors share a free slot, so cohorts with disjoint availability can
+        never co-serve, and are reachable only via single-cohort panels
+        (Propositions~\ref{prop:debrief}--\ref{prop:disjoint}).
+  \item A computational study at $10^5$ assessors evaluating three interventions, two of
+        which the theory predicts---correctly---will fail (Section~\ref{sec:exp}).
+\end{enumerate}
+
+\section{Related work}
+
+Constraint programming for scheduling is a mature field, with established formulations for
+job-shop scheduling, nurse rostering, timetabling, and vehicle routing with shift
+constraints. Our formulation uses standard techniques and we claim no methodological
+novelty there.
+
+Work on scheduling equity has largely addressed the fairness of shift assignment
+itself---who works nights, how rest is distributed, how preferences are honoured. To our
+knowledge the complementary question, whether a shift structure excludes workers from
+\emph{other} organisational processes, has not been treated formally. The practitioner
+literature on frontline-worker exclusion is qualitative and does not model the mechanism.
+
+\section{Model}
+\label{sec:model}
+
+Let $T=\{1,\dots,n\}$ be a discretised horizon of slots. Each assessor $p$ in a population
+$P$ has an availability set $A_p \subseteq T$. A \emph{cohort} $C$ is a maximal set of
+assessors sharing an availability pattern, written $A_C$; in our setting cohorts
+correspond to shifts.
+
+A process requires $k$ sessions. A \emph{protocol} $\Pi \subseteq T^k$ is the set of
+permitted session-time tuples. We consider
+
+\[
+\Pi_{\mathrm{cont}} = \{(t,t+1,\dots,t+k-1)\},
+\qquad
+\Pi_{\mathrm{split}} = \{(t_1,\dots,t_k) : t_i \text{ distinct}\}.
+\]
+
+Let $N(t)=\{p : t \in A_p\}$ and let $S=\{t : N(t)\neq\emptyset\}$ denote the
+\emph{staffed set}. A schedule $s\in\Pi$ is \emph{viable} if $N(s_i)\neq\emptyset$ for
+all $i$.
+
+\begin{definition}[Reachability]
+Assessor $p$ is \emph{reachable} under $\Pi$ if there is a viable $s\in\Pi$ and an index
+$i$ with $s_i \in A_p$. A cohort is \emph{excluded} if no member is reachable.
+\end{definition}
+
+Reachability is necessary but not sufficient for participation: it states that an
+assignment is possible, not that it occurs, and says nothing about share.
+
+\section{Contiguity}
+
+Write $S$ as a disjoint union of maximal runs $R_1,\dots,R_m$ of consecutive slots.
+
+\begin{proposition}
+\label{prop:cont}
+Under $\Pi_{\mathrm{cont}}$, assessor $p$ is reachable if and only if there is a run $R_j$
+with $|R_j| \ge k$ and $A_p \cap R_j \neq \emptyset$.
+\end{proposition}
+
+\begin{proof}
+($\Leftarrow$) Given $t^\ast \in A_p \cap R_j$ with $|R_j|\ge k$, select $k$ consecutive
+slots within $R_j$ containing $t^\ast$. Every such slot lies in $S$, so the schedule is
+viable.
+($\Rightarrow$) A viable contiguous schedule occupies $k$ consecutive slots of $S$, which
+lie in a common maximal run $R_j$; hence $|R_j|\ge k$, and if $p$ fills a session then
+$A_p$ meets $R_j$.
+\end{proof}
+
+The content lies in the quantifier: reachability depends on the run containing the
+cohort's window, not on the length of that window.
+
+\begin{corollary}
+If $A_C \subseteq R_j$ with $|R_j| < k$, cohort $C$ is excluded.
+\end{corollary}
+
+\begin{proposition}[Severance]
+\label{prop:sever}
+There exist populations and slots $t^\dagger$ such that some cohort $C$ is reachable with
+respect to $S$ and excluded with respect to $S\setminus\{t^\dagger\}$, despite
+$t^\dagger \notin A_C$.
+\end{proposition}
+
+\begin{proof}
+Take $k=4$, $A_C=\{18,19\}$ and $A_D=\{14,15,16,17\}$. Then $S=\{14,\dots,19\}$ is a run
+of length $6$, and by Proposition~\ref{prop:cont} members of $C$ are reachable via the
+window $\{16,17,18,19\}$. Removing slot $17$ splits $S$ into runs of length $3$ and $2$,
+both shorter than $k$; no viable contiguous schedule exists and $C$ is excluded.
+\end{proof}
+
+Proposition~\ref{prop:sever} is the reason we distinguish reachability from window
+length. In our setting slot $17$ corresponds to shift changeover, when one crew has left
+and the next has not started.
+
+\section{Simultaneity}
+
+Viability as defined asks only that each session slot be staffed by \emph{someone}. Panel
+processes typically add a debrief in which all $k$ assessors participate together.
+
+\begin{proposition}
+\label{prop:debrief}
+Let $d(s)$ denote the debrief slot for schedule $s$. A panel $(p_1,\dots,p_k)$ is
+debrief-feasible only if $d(s) \in \bigcap_i A_{p_i}$.
+\end{proposition}
+
+\begin{proposition}
+\label{prop:disjoint}
+Under any synchronous debrief policy, a panel is schedulable only if
+$\bigcap_i A_{p_i} \neq \emptyset$. Consequently cohorts with pairwise-disjoint
+availability can never share a panel, at any debrief time.
+\end{proposition}
+
+\begin{corollary}
+\label{cor:single}
+A cohort whose availability is disjoint from that of every other cohort is served only by
+\emph{single-cohort} panels, in which all $k$ assessors are drawn from that cohort.
+\end{corollary}
+
+Corollary~\ref{cor:single} is the operative result. It explains why interventions that
+adjust debrief \emph{timing} cannot help: the obstruction is disjointness, not schedule
+placement.
+
+\section{Split protocols}
+
+\begin{proposition}
+\label{prop:split}
+Under $\Pi_{\mathrm{split}}$, assessor $p$ is reachable if and only if
+$A_p \neq \emptyset$ and $|S| \ge k$.
+\end{proposition}
+
+Combining Proposition~\ref{prop:split} with Corollary~\ref{cor:single}: a single-cohort
+panel drawn from cohort $C$ is schedulable under $\Pi_{\mathrm{split}}$ whenever
+$|A_C| \ge k$ across the horizon, even if $A_C$ contains no run of length $k$. Under
+$\Pi_{\mathrm{cont}}$ it requires such a run. This is the precise sense in which
+relaxing contiguity, and only that, admits the excluded cohort.
+
+\section{Computational study}
+\label{sec:exp}
+
+\subsection{Setup}
+
+We generate synthetic populations of $10^5$ assessors distributed over six sites and six
+functions. Corporate assessors are available 09:00--17:00 on weekdays; day-shift crews
+18:00--20:00 (post-shift); swing and night crews in short pre-shift windows; weekend crews
+Friday to Sunday. Assessor levels are drawn from a fixed distribution, and a per-assessor
+weekly cap limits load.
+
+Panels are assigned by a constraint program, sharded by site, solved with CP-SAT. The
+model enforces exactly one assessor per session, no assessor in two places at once, no
+assessor twice on a panel, a synchronous debrief with all panelists free, at least one
+senior assessor, at least one assessor outside the subject's function, and per-assessor
+caps. The objective maximises panels filled with a secondary term minimising the maximum
+per-assessor load. Two implementation details are load-bearing at this scale: a
+precomputed availability index keyed by (site, day, slot), and a capped candidate
+shortlist per session---without the latter the model exceeds available memory.
+
+\subsection{Interventions}
+
+We evaluate three interventions against the standard contiguous protocol
+(Table~\ref{tab:interventions}). The first staffs the changeover slot, addressing
+Proposition~\ref{prop:sever}. The second relaxes debrief to any slot within 24 hours of
+the final session. The third replaces $\Pi_{\mathrm{cont}}$ with $\Pi_{\mathrm{split}}$.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Intervention & Day-shift seats & Panels filled \\
+\midrule
+None (baseline)                       & $0\%$      & $74.6\%$ \\
+Staff changeover slot                 & $0\%$      & $60.9\%$ \\
+Relax debrief to any slot within 24h  & $0\%$      & $60.9\%$ \\
+Split sessions across days            & $\sim15\%$ & $73.7\%$ \\
+\bottomrule
+\end{tabular}
+\caption{Day-shift share of panel seats under each intervention. Figures vary by
+approximately one percentage point across runs owing to solver non-determinism.}
+\label{tab:interventions}
+\end{table}
+
+The first two interventions fail, as Corollary~\ref{cor:single} predicts: neither admits a
+single-cohort day-shift panel. Staffing the changeover slot does restore reachability in
+the contiguity sense---with the debrief constraint removed, day-shift share rises to
+$4.8\%$---but the simultaneity constraint re-excludes the cohort.
+
+The third succeeds, and inspection of the resulting assignments confirms the predicted
+structure: day-shift assessors appear on panels composed entirely of day-shift assessors,
+with sessions distributed across days within their 18:00--20:00 windows.
+
+\subsection{Cost}
+
+Splitting sessions does not reduce the proportion of panels filled ($74.6\%$ versus
+$73.7\%$, within run-to-run variation) and does not increase maximum per-assessor load.
+We do not claim this is general; it is a property of the populations tested.
+
+\section{Limitations}
+
+All results are obtained on synthetic populations. Shift windows, cohort proportions, and
+assessor level distributions are modelled rather than observed. The structural results of
+Sections 4--6 are exact and independent of these choices; the magnitudes in
+Table~\ref{tab:interventions} are not, and we make no claim that $15\%$ would be recovered
+in any particular organisation.
+
+We model reachability and observed share, but do not characterise the relationship between
+them. Proposition~\ref{prop:split} establishes that the day shift becomes reachable; it
+does not predict $15\%$. Closing that gap is the natural next question.
+
+Finally, we treat availability as exogenous and binary. Real assessors have preferences,
+fatigue, and partial availability, none of which we model.
+
+\section{Conclusion}
+
+Panel processes exclude shift-based cohorts through two independent mechanisms:
+contiguity, which requires a sufficiently long run of staffed slots, and simultaneity,
+which requires the panel to share a free slot. Interventions addressing either mechanism
+alone are ineffective when both bind. Relaxing contiguity succeeds because it is the only
+intervention among those tested that permits single-cohort panels, which
+Corollary~\ref{cor:single} shows to be the sole available structure for a cohort whose
+availability is disjoint from all others.
+
+The framing generalises beyond hiring to any organisational process requiring several
+participants over a contiguous block: safety committees, certification boards, promotion
+panels. Where participation is treated as a matter of willingness or qualification, it may
+instead be a matter of schedule structure.
+
+\end{document}
