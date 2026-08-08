@@ -167,30 +167,12 @@ def _feasible_times(
     return sorted(out)
 
 
-def _cohort_times(
-    site: str,
-    shift: "Shift",
-    level: int,
-    index: dict[tuple[str, int, int], list["Interviewer"]],
-    min_pool: int = 3,
-) -> list[tuple[int, int]]:
-    """(day, slot) pairs at this site staffed by THIS cohort at the required level."""
-    out = []
-    for (s, day, slot), people in index.items():
-        if s != site:
-            continue
-        if sum(1 for p in people if p.shift is shift and p.level >= level) >= min_pool:
-            out.append((day, slot))
-    return sorted(out)
-
-
 def generate_loops(
     n: int,
     rng: random.Random,
     index: dict[tuple[str, int, int], list["Interviewer"]],
     n_options: int = 4,
     split: bool = False,
-    cohort_option_rate: float = 0.5,
 ) -> list[Loop]:
     """Generate loops with candidate-facing scheduling options.
 
@@ -226,18 +208,7 @@ def generate_loops(
         while len(options) < n_options and guard < 60:
             guard += 1
             if split:
-                # With some probability propose a schedule drawn entirely from ONE
-                # cohort's availability. Drawing every option from the site-wide
-                # pool means a single-cohort schedule is essentially never offered,
-                # so the solver never gets the chance to build one.
-                if rng.random() < cohort_option_rate:
-                    shift = rng.choice(list(Shift))
-                    ct = _cohort_times(site, shift, level, index)
-                    if len(ct) < ROUNDS_PER_LOOP:
-                        continue
-                    rounds = tuple(rng.sample(ct, ROUNDS_PER_LOOP))
-                else:
-                    rounds = tuple(rng.choice(feasible) for _ in range(ROUNDS_PER_LOOP))
+                rounds = tuple(rng.choice(feasible) for _ in range(ROUNDS_PER_LOOP))
                 if len(set(rounds)) < ROUNDS_PER_LOOP:
                     continue
             else:
@@ -280,7 +251,6 @@ def generate_loops(
 # --------------------------------------------------------------------------
 
 POOL_CAP = 10          # candidate interviewers considered per round
-ENFORCE_DEBRIEF = True # synchronous debrief in the slot after the final round
 
 
 def build_availability_index(
@@ -356,26 +326,12 @@ def solve_shard(
 
     for loop in loops:
         for k, rounds in enumerate(loop.options):
-            # Debrief occupies the slot after the LAST round, wherever that falls.
-            # Every panelist must be free then -- a far stronger requirement than
-            # "each round slot is staffed by someone", since it forces the whole
-            # panel into a shared free slot.
-            if ENFORCE_DEBRIEF:
-                d_day, d_slot = max(rounds)
-                d_slot += 1
-                if d_slot >= DAY_SLOTS:
-                    continue
-            else:
-                d_day = d_slot = None
-
             wk = model.NewBoolVar(f"w_{loop.id}_{k}")
             w[(loop.id, k)] = wk
             scheduled_terms[loop.id].append(wk)
 
             for r, (day, slot) in enumerate(rounds):
                 pool = eligible_interviewers(loop, day, slot, index, load, rng)
-                if ENFORCE_DEBRIEF:
-                    pool = [p for p in pool if d_slot in p.available_slots(d_day)]
                 round_vars = []
                 for person in pool:
                     av = model.NewBoolVar(f"a_{loop.id}_{k}_{r}_{person.id}")
@@ -383,9 +339,6 @@ def solve_shard(
                     by_round[(loop.id, k, r)].append((person.id, av))
                     round_vars.append(av)
                     by_person_time[(person.id, day, slot)].append(av)
-                    # A panelist is occupied during debrief too.
-                    if ENFORCE_DEBRIEF and (d_day, d_slot) != (day, slot):
-                        by_person_time[(person.id, d_day, d_slot)].append(av)
                     by_person[person.id].append(av)
                     by_loop_person[(loop.id, person.id)].append(av)
                     people_by_id[person.id] = person
